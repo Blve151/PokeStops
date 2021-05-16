@@ -28,10 +28,9 @@ import static dev.blu3.pokestops.utils.Utils.regex;
 public class PokeStopListeners {
     public static HashMap<UUID, Boolean> removePokestopMap = new HashMap<>();
     HashMap<UUID, Set<PokestopCooldown>> pokestopCooldownMap = new HashMap<>();
-    HashMap<UUID, Long> lastIteraction = new HashMap<>();
 
     @SubscribeEvent
-    public void onPokeStopInteract(PlayerInteractEvent.EntityInteractSpecific event) {
+    public void onPokeStopInteract(PlayerInteractEvent.EntityInteract event) {
         if (!(event.getTarget() instanceof EntityPokestop)) {
             return;
         }
