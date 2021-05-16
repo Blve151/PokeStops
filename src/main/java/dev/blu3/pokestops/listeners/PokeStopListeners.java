@@ -1,11 +1,11 @@
 package dev.blu3.pokestops.listeners;
 
-import ca.landonjw.gooeylibs2.implementation.tasks.Task;
 import com.pixelmonmod.pixelmon.entities.EntityPokestop;
 import com.pixelmonmod.pixelmon.items.ItemTM;
 import dev.blu3.pokestops.PokeStops;
 import dev.blu3.pokestops.obj.PokestopCooldown;
 import dev.blu3.pokestops.obj.PokestopType;
+import dev.blu3.pokestops.utils.Task;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
@@ -28,6 +28,7 @@ import static dev.blu3.pokestops.utils.Utils.regex;
 public class PokeStopListeners {
     public static HashMap<UUID, Boolean> removePokestopMap = new HashMap<>();
     HashMap<UUID, Set<PokestopCooldown>> pokestopCooldownMap = new HashMap<>();
+    HashMap<UUID, Long> lastIteraction = new HashMap<>();
 
     @SubscribeEvent
     public void onPokeStopInteract(PlayerInteractEvent.EntityInteractSpecific event) {
