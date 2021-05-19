@@ -28,6 +28,7 @@ import static dev.blu3.pokestops.utils.Utils.regex;
 public class PokeStopListeners {
     public static HashMap<UUID, Boolean> removePokestopMap = new HashMap<>();
     HashMap<UUID, Set<PokestopCooldown>> pokestopCooldownMap = new HashMap<>();
+    HashMap<UUID, Task> pokestopTaskCooldownMap = new HashMap<>();
 
     @SubscribeEvent
     public void onPokeStopInteract(PlayerInteractEvent.EntityInteract event) {
@@ -39,7 +40,7 @@ public class PokeStopListeners {
         EntityPokestop pokestop = (EntityPokestop) event.getTarget();
         EntityPlayerMP player = (EntityPlayerMP) event.getEntityPlayer();
 
-        if(removePokestopMap.get(player.getUniqueID()) != null){
+        if (removePokestopMap.get(player.getUniqueID()) != null) {
             event.setCanceled(true);
             pokestop.setDead();
             removePokestopMap.remove(player.getUniqueID());
@@ -48,7 +49,7 @@ public class PokeStopListeners {
         }
 
         if (!pokestop.getEntityData().hasKey("pokestopType")) return;
-        if(event.getHand() == EnumHand.OFF_HAND) return;
+        if (event.getHand() == EnumHand.OFF_HAND) return;
         Optional<PokestopType> optPokestopType = PokeStops.dataManager.lookup(pokestop);
         if (!optPokestopType.isPresent()) return;
 
@@ -57,43 +58,51 @@ public class PokeStopListeners {
         Optional<PokestopCooldown> optCooldown = pokestopCooldowns.stream().filter(pokestopCooldown -> pokestop.getUniqueID().equals(pokestopCooldown.pokestopUUID)).findFirst();
 
         if (optCooldown.isPresent()) {
-            long secondsLeft = ((optCooldown.get().cooldownTime) / 1000) + pokestopType.cooldownSeconds - (System.currentTimeMillis() / 1000);
-            String stringLeft;
-            if (TimeUnit.SECONDS.toMinutes(secondsLeft) == 0) {
-                stringLeft = String.format("%d sec(s)", TimeUnit.SECONDS.toSeconds(secondsLeft));
-            } else {
-                stringLeft = String.format("%d min(s)", TimeUnit.SECONDS.toMinutes(secondsLeft));
+            if(player.canUseCommand(0, "pokestops.cooldown.bypass")){
+                player.sendMessage(new TextComponentString(regex("&cBypassed PokeStop cooldown.")));
+                Task task = pokestopTaskCooldownMap.get(player.getUniqueID());
+                if(task != null){
+                    pokestopTaskCooldownMap.get(player.getUniqueID()).setExpired();
+                }
+            }else{
+                long secondsLeft = ((optCooldown.get().cooldownTime) / 1000) + pokestopType.cooldownSeconds - (System.currentTimeMillis() / 1000);
+                String stringLeft;
+                if (TimeUnit.SECONDS.toMinutes(secondsLeft) == 0) {
+                    stringLeft = String.format("%d sec(s)", TimeUnit.SECONDS.toSeconds(secondsLeft));
+                } else {
+                    stringLeft = String.format("%d min(s)", TimeUnit.SECONDS.toMinutes(secondsLeft));
+                }
+                player.sendMessage(new TextComponentString(regex("&cYou can't use this PokeStop for " + stringLeft + ".")));
+                event.setCanceled(true);
+                return;
             }
-            player.sendMessage(new TextComponentString(regex("&cYou can't use this PokeStop for " + stringLeft + ".")));
-            event.setCanceled(true);
-        } else {
-            player.sendMessage(new TextComponentString(regex("&bYou claimed the PokeStop.")));
-            pokestopCooldowns.add(new PokestopCooldown(pokestop.getUniqueID(), System.currentTimeMillis()));
-            pokestopCooldownMap.put(player.getUniqueID(), pokestopCooldowns);
-
-            openDropInventory(player, pokestopType);
-            EntityPokestop fakePokestop = new EntityPokestop(pokestop.world, pokestop.posX, pokestop.posY, pokestop.posZ);
-            fakePokestop.setSize(pokestop.getSize());
-            fakePokestop.setAlwaysAnimate(true);
-            fakePokestop.animate();
-            RGB c1 = pokestopType.rgbCooldownColor;
-            RGB c2 = pokestopType.rgbBaseColor;
-
-            setPokestopColorForPlayer(player, fakePokestop, pokestop, c1.red, c1.green, c1.blue);
-
-            Task.builder()
-                    .execute(task -> {
-                        Set<PokestopCooldown> pokestopCooldowns1 = pokestopCooldownMap.get(player.getUniqueID());
-                        Optional<PokestopCooldown> optCooldown1 = pokestopCooldowns1.stream().filter(pokestopCooldown -> pokestop.getUniqueID().equals(pokestopCooldown.pokestopUUID)).findFirst();
-                        if (optCooldown1.isPresent()) {
-                            pokestopCooldowns1.remove(optCooldown1.get());
-                            pokestopCooldownMap.put(player.getUniqueID(), pokestopCooldowns1);
-                        }
-                        setPokestopColorForPlayer(player, fakePokestop, pokestop, c2.red, c2.green, c2.blue);
-                    })
-                    .delay(20L * pokestopType.cooldownSeconds)
-                    .build();
         }
+        player.sendMessage(new TextComponentString(regex("&bYou claimed the PokeStop.")));
+        pokestopCooldowns.add(new PokestopCooldown(pokestop.getUniqueID(), System.currentTimeMillis()));
+        pokestopCooldownMap.put(player.getUniqueID(), pokestopCooldowns);
+        openDropInventory(player, pokestopType);
+        EntityPokestop fakePokestop = new EntityPokestop(pokestop.world, pokestop.posX, pokestop.posY, pokestop.posZ);
+        fakePokestop.setSize(pokestop.getSize());
+        fakePokestop.setAlwaysAnimate(true);
+        fakePokestop.animate();
+        RGB c1 = pokestopType.rgbCooldownColor;
+        RGB c2 = pokestopType.rgbBaseColor;
+
+        setPokestopColorForPlayer(player, fakePokestop, pokestop, c1.red, c1.green, c1.blue);
+
+        Task task = Task.builder()
+                .execute(task1 -> {
+                    Set<PokestopCooldown> pokestopCooldowns1 = pokestopCooldownMap.get(player.getUniqueID());
+                    Optional<PokestopCooldown> optCooldown1 = pokestopCooldowns1.stream().filter(pokestopCooldown -> pokestop.getUniqueID().equals(pokestopCooldown.pokestopUUID)).findFirst();
+                    if (optCooldown1.isPresent()) {
+                        pokestopCooldowns1.remove(optCooldown1.get());
+                        pokestopCooldownMap.put(player.getUniqueID(), pokestopCooldowns1);
+                    }
+                    setPokestopColorForPlayer(player, fakePokestop, pokestop, c2.red, c2.green, c2.blue);
+                })
+                .delay(20L * pokestopType.cooldownSeconds)
+                .build();
+        pokestopTaskCooldownMap.put(player.getUniqueID(), task);
     }
 
     @SubscribeEvent
