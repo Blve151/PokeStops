@@ -127,16 +127,6 @@ public class PokeStopListeners {
         }
     }
 
-    @SubscribeEvent
-    public void onTMFound(TickEvent.PlayerTickEvent event) {
-        EntityPlayer player = event.player;
-        for (ItemStack stack : player.inventory.mainInventory) {
-            if (stack != null && stack.getItem() instanceof ItemTM) {
-                stack.setStackDisplayName(stack.getDisplayName().replaceFirst("\\w+\\s", ""));
-            }
-        }
-    }
-
     private void setPokestopColorForPlayer(EntityPlayerMP player, EntityPokestop fakePokestop, EntityPokestop pokestop, int r, int g, int b) {
         fakePokestop.setColor(r, g, b);
         SPacketEntityMetadata entityAttributesPacket1 = new SPacketEntityMetadata(pokestop.getEntityId(), fakePokestop.getDataManager(), true);
